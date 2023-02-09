@@ -15,30 +15,8 @@ with open(filename, "r") as boxnote:
 content_list = data['doc']['content']
 
 d21 = content_list[21]
-# d10 = content_list[10]
-# d30 = content_list[30]
-# d60 = content_list[60]
 
-# def print_content(el):
-#     if 'content' in el.keys():
-#         print(el['type'])
-#         if el['type'] == 'bullet_list':
-#             print("ul")                
-#         elif el['type'] == 'list_item':
-#             print('li')
-#         # print(el['content'])
-#         # print("\n")
-#         # print(el['content'][0])
-#         for item in el['content']:
-#             # print("ITEM\n")
-#             # print(item)
-#             # print(type(item))
-#             print_content(item)
-#     if 'text' in el.keys():
-#         print(el['text'])
-
-def print_content(el):
-    # print(el['type'])
+def print_content(el,html_style=''):
     # Recursive procedure to go through nested structure
     if 'content' in el.keys():
         if el['type'] == 'bullet_list':
@@ -51,19 +29,22 @@ def print_content(el):
                     print_content(item)
         elif el['type'] == 'paragraph':
             with tag('p'):
+                if 'marks' in el.keys():
+                    for mark in el['marks']:
+                        if 'attrs' in mark.keys():
+                            if 'alignment' in mark['attrs']:
+                                # doc.attr(style = "text-align:{};".format(mark['attrs']['alignment']))
+                                html_style += "text-align:{};".format(mark['attrs']['alignment'])
+                                 
                 for item in el['content']:
-                    print_content(item)
+                    print_content(item, html_style)
+
         else: print("*** Unsupported type (in-content): {}".format(el['type']))
     
     # HTML convertible line(s)
     elif 'text' in el.keys():
-        # print(el['marks'])
-        # text(el['text'])
-        # doc.asis("".format())
-
         # Additional attributes 
-
-        html_style = ''
+        # html_style = ''
         html_strong = False
         if 'marks' in el.keys():
             for mark in el['marks']:                
@@ -85,12 +66,13 @@ def print_content(el):
             with tag('strong'):  
                 text(el['text'])
         else:
-            # print(el['marks'])
             text(el['text'])
+            #  doc.asis("".format())
                 
-    elif el['type'] == 'paragraph' and len(el) > 1:
-        print("*** Unsupported type: {}".format(el['type']))
-        print(el)
+    elif el['type'] == 'paragraph' and len(el.keys()) > 1:
+        if 'marks' not in el.keys(): 
+            print("*** Unsupported type: {}".format(el['type']))
+            print(el)
 
     
 
