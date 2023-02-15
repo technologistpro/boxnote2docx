@@ -5,7 +5,7 @@
 
     Boxnotes Converter
 
-    Usage: 
+    Usage: ./boxnote2docx a-box-note.boxnote  
 
 '''
 
@@ -139,7 +139,7 @@ if __name__ == '__main__':
     # Set logging configuration
     logging.basicConfig(format='%(asctime)s:%(levelname)s:%(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 
-    filename = sys.argv[0]
+    filename = sys.argv[1]
 
     # Open Boxnote for reading
     with open(filename, "r") as boxnote:
