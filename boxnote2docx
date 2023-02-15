@@ -10,9 +10,11 @@
 '''
 
 from yattag import Doc
+import docx
 from htmldocx import HtmlToDocx
 import json
 import logging
+import sys
 
 
 ''' Convert Boxnote to HTML '''
@@ -137,41 +139,48 @@ if __name__ == '__main__':
     # Set logging configuration
     logging.basicConfig(format='%(asctime)s:%(levelname)s:%(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 
-    # filename = "its-operations - 1-10-2023.boxnote"
-    filename = "Newsletter1.boxnote"
-    # filename = "Airtable: Client Stories App Requirements.boxnote"
+    filename = sys.argv[0]
 
     # Open Boxnote for reading
     with open(filename, "r") as boxnote:
         data = json.load(boxnote)
 
+    # Microsoft Document holder
+    ms_docx = ''
+
     # Determine if object contains doc object or atext object
+    if 'atext' in data.keys():
+        ms_docx = docx.Document()
+        ms_docx.add_paragraph(data['atext']['text'])
     
 
-    # Get interesting Node: object -> doc -> content
-    content_list = data['doc']['content']
+    elif 'doc' in data.keys():
+        # Get interesting Node: object -> doc -> content
+        content_list = data['doc']['content']
 
-    # Initiate HTML Objects
-    doc, tag, text = Doc().tagtext()
+        # Initiate HTML Objects
+        doc, tag, text = Doc().tagtext()
 
-    # Generate HTML
-    with tag('html'):
-        with tag('body'):
-            # content_to_html(content_list[21])
-            for elm in content_list:
-                content_to_html(elm)
+        # Generate HTML
+        with tag('html'):
+            with tag('body'):
+                # content_to_html(content_list[21])
+                for elm in content_list:
+                    content_to_html(elm)
 
-    html_result = doc.getvalue()
+        html_result = doc.getvalue()
     
-    # print(html_result)
-    with open(filename.replace('boxnote', "html"), "w") as file:
-        file.write(html_result)
+        # print(html_result)
+        with open(filename.replace('boxnote', "html"), "w") as file:
+            file.write(html_result)
 
-    new_parser = HtmlToDocx()
-    new_parser.table_style = 'TableGrid'
-    docx = new_parser.parse_html_string(html_result)
-    
-    docx.save(filename.replace('boxnote', "docx"))
+        # Html to Docx
+        new_parser = HtmlToDocx()
+        new_parser.table_style = 'Table Grid'
+        ms_docx = new_parser.parse_html_string(html_result)
+        
+    # Write Docx
+    ms_docx.save(filename.replace('boxnote', "docx"))
 
 
 
