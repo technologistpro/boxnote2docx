@@ -10,11 +10,28 @@
 '''
 
 from yattag import Doc
+import argparse
 import docx
-from htmldocx import HtmlToDocx
+import pypandoc
 import json
 import logging
+import os.path
 import sys
+
+docx_custom_reference = 'custom-reference.docx'
+
+
+''' Process command line arguments'''
+def get_arguments():
+    parser = argparse.ArgumentParser(prog='boxnote2docx', description='Convert Boxnote to Docx')
+    parser.add_argument("-b", "--boxnote", dest="boxnote", default=None, help="Path to Boxnote", required=True)
+    parser.add_argument("-d", "--dest-dir", dest="dest_dir", default='.', help='Destination dir', required=False)
+
+    try:
+        args = vars(parser.parse_args())
+    except SystemExit as e:
+        sys.exit()
+    return args
 
 
 ''' Convert Boxnote to HTML '''
@@ -27,6 +44,16 @@ def content_to_html(el,html_style=''):
                     content_to_html(item)
 
         elif el['type'] == 'list_item':
+            with tag('li'):
+                for item in el['content']:
+                    content_to_html(item)
+
+        elif el['type'] == 'ordered_list':
+            with tag('ol'):
+                for item in el['content']:
+                    content_to_html(item)
+
+        elif el['type'] == 'tab_list':
             with tag('li'):
                 for item in el['content']:
                     content_to_html(item)
@@ -93,6 +120,7 @@ def content_to_html(el,html_style=''):
         html_strong = False
         html_em = False
         html_s = False
+        html_link = False
         if 'marks' in el.keys():
             for mark in el['marks']:                
                 if mark['type'] == 'font_color':
@@ -107,6 +135,8 @@ def content_to_html(el,html_style=''):
                     html_em = True
                 elif mark['type'] == 'strikethrough':
                     html_s = True
+                elif mark['type'] == 'link':
+                    html_link = True
                 elif mark['type'] == 'author_id':
                     pass
                 else:
@@ -124,37 +154,55 @@ def content_to_html(el,html_style=''):
         elif html_s:
             with tag('s'):  
                 text(el['text'])
+        elif html_link:
+            with tag('a', href=el['text']):  
+                text(el['text'])
         else:
             text(el['text'])
             #  doc.asis("".format())
                 
     elif el['type'] == 'paragraph' and len(el.keys()) > 1:
-        if 'marks' not in el.keys(): 
-            logging.warning("*** Unsupported type: {}".format(el['type']))
-            logging.warning(el)
+        if 'marks' not in el.keys():
+            try:
+                if el['attrs']['data-marks']:
+                    logging.warning("*** Unsupported type: {}".format(el['type']))
+                    logging.warning(el)
+            except(KeyError):
+                pass
 
 
 if __name__ == '__main__':    
     
+    args = get_arguments()
+
+    filename = args['boxnote']
+    dest_dir = args['dest_dir']
+    # filename = sys.argv[1]
+
     # Set logging configuration
-    logging.basicConfig(format='%(asctime)s:%(levelname)s:%(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
-
-    filename = sys.argv[1]
-
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s:%(levelname)s:%(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
+    
+    logging.info("Opening file: {}".format(filename))
     # Open Boxnote for reading
     with open(filename, "r") as boxnote:
         data = json.load(boxnote)
 
     # Microsoft Document holder
     ms_docx = ''
-
+    docx_file = os.path.join( os.path.abspath(dest_dir), os.path.basename(filename).replace('boxnote', 'docx') )
+    
     # Determine if object contains doc object or atext object
     if 'atext' in data.keys():
+        logging.info("Processing {} as atext node".format(filename))
         ms_docx = docx.Document()
         ms_docx.add_paragraph(data['atext']['text'])
+        
+        # Write Docx
+        ms_docx.save(docx_file)
     
 
     elif 'doc' in data.keys():
+        logging.info("Processing {} as doc node".format(filename))
         # Get interesting Node: object -> doc -> content
         content_list = data['doc']['content']
 
@@ -171,16 +219,22 @@ if __name__ == '__main__':
         html_result = doc.getvalue()
     
         # print(html_result)
-        with open(filename.replace('boxnote', "html"), "w") as file:
+        html_file = os.path.join( os.path.abspath(dest_dir), os.path.basename(filename).replace('boxnote', 'html') )
+        with open( html_file, "w") as file:
             file.write(html_result)
 
         # Html to Docx
-        new_parser = HtmlToDocx()
-        new_parser.table_style = 'Table Grid'
-        ms_docx = new_parser.parse_html_string(html_result)
+
+        # # If using htmldocx
+        # # from htmldocx import HtmlToDocx
+        # new_parser = HtmlToDocx()
+        # new_parser.table_style = 'Table Grid'
+        # ms_docx = new_parser.parse_html_string(html_result)
         
-    # Write Docx
-    ms_docx.save(filename.replace('boxnote', "docx"))
+        output = pypandoc.convert_text(html_result, format='html', to='docx', outputfile=docx_file,extra_args=['--reference-doc', docx_custom_reference])
+    
+    logging.info("Completed processing {}".format(docx_file))
+
 
 
 
