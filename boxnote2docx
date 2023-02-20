@@ -48,6 +48,16 @@ def content_to_html(el,html_style=''):
                 for item in el['content']:
                     content_to_html(item)
 
+        elif el['type'] == 'check_list':
+            with tag('ul'):
+                for item in el['content']:
+                    content_to_html(item)
+
+        elif el['type'] == 'check_list_item':
+            with tag('li'):
+                for item in el['content']:
+                    content_to_html(item)
+
         elif el['type'] == 'ordered_list':
             with tag('ol'):
                 for item in el['content']:
@@ -84,6 +94,11 @@ def content_to_html(el,html_style=''):
                 # html_style += "padding: 5px; background-color: #E1E8F2; border: dotted 2px #00518A;"
                 for item in el['content']:
                     content_to_html(item, html_style)
+    
+        elif el['type'] == 'heading':
+            with tag('h1'):
+                for item in el['content']:
+                    content_to_html(item)
                     
         elif el['type'] == 'table':
             with tag('table', cellspacing="0", border="1"):
@@ -121,6 +136,7 @@ def content_to_html(el,html_style=''):
         html_em = False
         html_s = False
         html_link = False
+        html_highlight = False
         if 'marks' in el.keys():
             for mark in el['marks']:                
                 if mark['type'] == 'font_color':
@@ -135,6 +151,8 @@ def content_to_html(el,html_style=''):
                     html_em = True
                 elif mark['type'] == 'strikethrough':
                     html_s = True
+                elif mark['type'] == 'highlight':
+                    html_highlight = True
                 elif mark['type'] == 'link':
                     html_link = True
                 elif mark['type'] == 'author_id':
@@ -153,6 +171,9 @@ def content_to_html(el,html_style=''):
                 text(el['text'])
         elif html_s:
             with tag('s'):  
+                text(el['text'])
+        elif html_s:
+            with tag('mark'):  
                 text(el['text'])
         elif html_link:
             with tag('a', href=el['text']):  
@@ -220,8 +241,10 @@ if __name__ == '__main__':
     
         # print(html_result)
         html_file = os.path.join( os.path.abspath(dest_dir), os.path.basename(filename).replace('boxnote', 'html') )
-        with open( html_file, "w") as file:
-            file.write(html_result)
+
+        # TODO: Add toggle to allow printing of HTML
+        # with open( html_file, "w") as file:
+        #     file.write(html_result)
 
         # Html to Docx
 
